@@ -12,7 +12,7 @@
 
 #define MQTT_SERVER             "miranda.iot.catslair"
 #define USE_SERIAL
-#define HA_MQTT_BASE            "display/aquarium"
+#define HA_MQTT_BASE            "display/test"
 #define ONE_WIRE_PIN            D3
 
 #include <ArduinoOTA.h>
@@ -20,9 +20,11 @@
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-#include "sensory_bme.h"
 #include "sensory_dallas.h"
+#include "sensory_bme.h"
+#include "sensory_sht.h"
 
+Sensory_SHT      SensorSHT;
 Sensory_BME      SensorBME;
 Sensory_Dallas   SensorDallas(ONE_WIRE_PIN);
 
@@ -57,8 +59,12 @@ void setup() {
   client.setServer(MQTT_SERVER, 1883);
 
   Wire.begin();
-  SensorBME.setup(sensorCallback).setInterval(10000);
-  SensorDallas.setup(sensorCallback).setPollInterval(5).setPublishInterval(30); 
+  delay(500);
+  scan();
+  
+  SensorSHT.setup(sensorCallback).setPollInterval(5);
+  SensorBME.setup(sensorCallback).setPollInterval(5);
+  SensorDallas.setup(sensorCallback).setPollInterval(5); 
 
   ArduinoOTA.begin();
 }
@@ -72,6 +78,7 @@ void loop() {
   ArduinoOTA.handle();
   SensorDallas.loop();
   SensorBME.loop();    
+  SensorSHT.loop();
 };
 
 
@@ -96,6 +103,7 @@ void setup_wifi() {
   Serial.printf("IP address : %s/%s\n", WiFi.localIP().toString().c_str(), WiFi.subnetMask().toString().c_str());
   Serial.printf("Hostname   : %s\n", WiFi.hostname().c_str());
 
+  Serial.printf("SDA is %d and SCL is %d\n", SDA, SCL);
   myHostname = WiFi.hostname();
   //WiFi.softAPdisconnect(true);
 }
@@ -126,4 +134,46 @@ void pin_init() {
 };
 
 
+void scan() {
+  
+{
+  byte error, address;
+  int nDevices;
+ 
+  Serial.println("Scanning...");
+ 
+  nDevices = 0;
+  for(address = 1; address < 127; address++ )
+  {
+    // The i2c_scanner uses the return value of
+    // the Write.endTransmisstion to see if
+    // a device did acknowledge to the address.
+    Wire.beginTransmission(address);
+    error = Wire.endTransmission();
+ 
+    if (error == 0)
+    {
+      Serial.print("I2C device found at address 0x");
+      if (address<16)
+        Serial.print("0");
+      Serial.print(address,HEX);
+      Serial.println("  !");
+ 
+      nDevices++;
+    }
+    else if (error==4)
+    {
+      Serial.print("Unknown error at address 0x");
+      if (address<16)
+        Serial.print("0");
+      Serial.println(address,HEX);
+    }    
+  }
+  if (nDevices == 0)
+    Serial.println("No I2C devices found\n");
+  else
+    Serial.println("done\n");
+}
+
+}
 

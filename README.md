@@ -4,6 +4,7 @@
 
 * Dallas DS18B20 OneWire Temperature
 * Borsh Temperature, Humidty and Pressure Sensors (BMP/BME 280)
+* SHT3x Temperature, Humidity
 
 ## Background
 
